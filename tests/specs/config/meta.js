@@ -3,7 +3,7 @@ define([
   'base',
   'charset',
   'hasOwnProperty',
-  'map',
+//  'map',
   'paths',
 //  'preload',
   'vars'

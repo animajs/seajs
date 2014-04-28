@@ -18,13 +18,14 @@
 
 <script src="../../../src/module.js"></script>
 <script src="../../../src/config.js"></script>
+<script src="../../test.js"></script>
+<script src="path.js"></script>
 </head>
 <body>
 <div id="out"></div>
 <script>
   seajs.use('../../test', function(test) {
     test.run([
-      'events.js',
       'path.js'
     ])
   })

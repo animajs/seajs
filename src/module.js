@@ -205,6 +205,15 @@ Module.define = function (id, deps, factory) {
     factory: factory
   }
 
+  // Try to derive uri for anonymous modules
+  if (!meta.uri) {
+    var script = getCurrentScript()
+
+    if (script) {
+      meta.uri = script.src
+    }
+  }
+
   Module.save(meta.uri, meta)
 }
 

@@ -9,7 +9,9 @@ seajs.on('fetch', function(data) {
 
 
 define(function(require) {
-
+  seajs.config({
+    base: './combo-map/'
+  })
   var test = require('../../../test')
   var a = require('a')
   var b = require('b')

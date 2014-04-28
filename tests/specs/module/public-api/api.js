@@ -27,16 +27,16 @@ define(function(require, exports, mod) {
 
   assert(typeof(seajs.cache) === 'object', 'seajs.cache')
   assert(typeof(seajs.data) === 'object', 'seajs.data')
-  assert(typeof(seajs.data.events) === 'object', 'data.events')
+//  assert(typeof(seajs.data.events) === 'object', 'data.events')
   assert(typeof(seajs.data.fetchedList) === 'object', 'data.fetchedList')
   assert(isFunction(seajs.data.cid), 'data.cid')
 
   assert(isFunction(seajs.Module), 'seajs.Module')
   assert(isFunction(seajs.resolve), 'seajs.resolve')
-  assert(isFunction(seajs.request), 'seajs.request')
+//  assert(isFunction(seajs.request), 'seajs.request')
   assert(isFunction(seajs.require), 'seajs.require')
 
-  assert(getOwnPropertyCount(seajs) === 12, getOwnPropertyCount(seajs))
+  assert(getOwnPropertyCount(seajs) === 11, getOwnPropertyCount(seajs))
 
 
   // define
@@ -60,11 +60,11 @@ define(function(require, exports, mod) {
   assert(isFunction(Module.prototype.resolve), 'Module.prototype.resolve')
   assert(isFunction(Module.prototype.load), 'Module.prototype.load')
   assert(isFunction(Module.prototype.onload), 'Module.prototype.onload')
-  assert(isFunction(Module.prototype.fetch), 'Module.prototype.fetch')
+//  assert(isFunction(Module.prototype.fetch), 'Module.prototype.fetch')
   assert(isFunction(Module.prototype.exec), 'Module.prototype.exec')
 
   assert(getOwnPropertyCount(Module) === 6, getOwnPropertyCount(Module))
-  assert(getOwnPropertyCount(Module.prototype) === 5, getOwnPropertyCount(Module.prototype))
+  assert(getOwnPropertyCount(Module.prototype) === 4, getOwnPropertyCount(Module.prototype))
 
   
   // require

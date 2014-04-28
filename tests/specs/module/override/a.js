@@ -1,2 +1,2 @@
-define('a', [], { name: 'a' });
-define('a', [], { name: 'a2' });
+define([], { name: 'a' });
+define([], { name: 'a2' });

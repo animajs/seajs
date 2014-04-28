@@ -11,10 +11,10 @@ var testSuites = [
   'specs/misc/bootstrap',
   'specs/misc/callback-order',
   'specs/misc/ie-cache',
-  'specs/misc/load-perf',
-  'specs/misc/on-error',
+//  'specs/misc/load-perf',
+//  'specs/misc/on-error',
   'specs/misc/utf8-in-gbk',
-  'specs/misc/x-ua-compatible',
+//  'specs/misc/x-ua-compatible',
 
   'research/derive-uri'
 ]

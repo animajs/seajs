@@ -1,3 +1,3 @@
-define('define-a', [], function(require, exports) {
+define(function(require, exports) {
   exports.name = 'a'
 });

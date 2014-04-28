@@ -24,7 +24,7 @@ define(function(_require) {
     require('./combo.js')
     done()
   } else {
-    seajs.request('./require-global/combo.js', done)
+    done()
   }
 
   function done() {

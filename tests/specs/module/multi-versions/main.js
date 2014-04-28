@@ -3,9 +3,9 @@ seajs.config({
   base: './multi-versions',
 
   alias: {
-    'jq164':  'jquery/1.6.4/jquery',
-    'jq171':  'jquery/1.7.1/jquery',
-    'jquery': 'jquery/1.6.4/jquery'
+    'jq164':  'multi-versions/jquery/1.6.4/jquery',
+    'jq171':  'multi-versions/jquery/1.7.1/jquery',
+    'jquery': 'multi-versions/jquery/1.6.4/jquery'
   }
 })
 

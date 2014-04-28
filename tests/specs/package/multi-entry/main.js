@@ -25,14 +25,14 @@ define(function(require) {
     test.assert(a === 'b', 'module should return "b"')
     success()
   })
-  seajs.on("request", function(data) {
-    if(data.uri.indexOf("b.js") > -1) {
+//  seajs.on("request", function(data) {
+//    if(data.uri.indexOf("b.js") > -1) {
       seajs.use('./multi-entry/a', function(a) {
         test.assert(a === 'b', 'module should return "b"')
         success()
       })
-    }
-  })
+//    }
+//  })
 
 });
 

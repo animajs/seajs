@@ -37,7 +37,8 @@ function cid() {
 }
 
 
-
+seajs.on = seajs.off = function(){return seajs}
+var emit = seajs.emit = function(){return seajs}
 /**
  * util-path.js - The utilities for operating path such as id, uri
  */
@@ -214,6 +215,37 @@ function getScriptAbsoluteSrc(node) {
 seajs.resolve = id2Uri
 
 
+/**
+ * util-request.js - The utilities for requesting script and style files
+ * ref: tests/research/load-js-css/test.html
+ */
+
+var interactiveScript
+
+function getCurrentScript() {
+  if (doc.currentScript) {
+    return doc.currentScript
+  }
+
+  // For IE6-9 browsers, the script onload event may not fire right
+  // after the script is evaluated. Kris Zyp found that it
+  // could query the script nodes and the one that is in "interactive"
+  // mode indicates the current script
+  // ref: http://goo.gl/JHfFW
+  if (interactiveScript && interactiveScript.readyState === "interactive") {
+    return interactiveScript
+  }
+
+  var scripts = head.getElementsByTagName("script")
+
+  for (var i = scripts.length - 1; i >= 0; i--) {
+    var script = scripts[i]
+    if (script.readyState === "interactive") {
+      interactiveScript = script
+      return interactiveScript
+    }
+  }
+}
 
 
 /**
@@ -421,6 +453,15 @@ Module.define = function (id, deps, factory) {
     uri: Module.resolve(id),
     deps: deps,
     factory: factory
+  }
+
+  // Try to derive uri for anonymous modules
+  if (!meta.uri) {
+    var script = getCurrentScript()
+
+    if (script) {
+      meta.uri = script.src
+    }
   }
 
   Module.save(meta.uri, meta)

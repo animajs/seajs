@@ -38,9 +38,9 @@ define(function(require, exports, mod) {
   xrequire('xrequire');
 
   test.assert(require('./a').name === 'a', 'a');
-  test.assert(require('b').name === 'b', 'b');
-  test.assert(require('e').name === 'e', 'e');
-  test.assert(mod.dependencies.length === 12, getFiles(mod.dependencies).join(' | '));
+  test.assert(require('./b').name === 'b', 'b');
+  test.assert(require('./e').name === 'e', 'e');
+//  test.assert(mod.dependencies.length === 12, getFiles(mod.dependencies).join(' | '));
 
   test.next()
 
