@@ -37,64 +37,6 @@ function cid() {
 }
 
 
-/**
- * util-events.js - The minimal events support
- */
-
-var events = data.events = {}
-
-// Bind event
-seajs.on = function(name, callback) {
-  var list = events[name] || (events[name] = [])
-  list.push(callback)
-  return seajs
-}
-
-// Remove event. If `callback` is undefined, remove all callbacks for the
-// event. If `event` and `callback` are both undefined, remove all callbacks
-// for all events
-seajs.off = function(name, callback) {
-  // Remove *all* events
-  if (!(name || callback)) {
-    events = data.events = {}
-    return seajs
-  }
-
-  var list = events[name]
-  if (list) {
-    if (callback) {
-      for (var i = list.length - 1; i >= 0; i--) {
-        if (list[i] === callback) {
-          list.splice(i, 1)
-        }
-      }
-    }
-    else {
-      delete events[name]
-    }
-  }
-
-  return seajs
-}
-
-// Emit event, firing all bound callbacks. Callbacks receive the same
-// arguments as `emit` does, apart from the event name
-var emit = seajs.emit = function(name, data) {
-  var list = events[name], fn
-
-  if (list) {
-    // Copy callback lists to prevent modification
-    list = list.slice()
-
-    // Execute event callbacks, use index because it's the faster.
-    for(var i = 0, len = list.length; i < len; i++) {
-      list[i](data)
-    }
-  }
-
-  return seajs
-}
-
 
 /**
  * util-path.js - The utilities for operating path such as id, uri
@@ -272,129 +214,6 @@ function getScriptAbsoluteSrc(node) {
 seajs.resolve = id2Uri
 
 
-/**
- * util-request.js - The utilities for requesting script and style files
- * ref: tests/research/load-js-css/test.html
- */
-
-var head = doc.head || doc.getElementsByTagName("head")[0] || doc.documentElement
-var baseElement = head.getElementsByTagName("base")[0]
-
-var currentlyAddingScript
-var interactiveScript
-
-function request(url, callback, charset) {
-  var node = doc.createElement("script")
-
-  if (charset) {
-    var cs = isFunction(charset) ? charset(url) : charset
-    if (cs) {
-      node.charset = cs
-    }
-  }
-
-  addOnload(node, callback, url)
-
-  node.async = true
-  node.src = url
-
-  // For some cache cases in IE 6-8, the script executes IMMEDIATELY after
-  // the end of the insert execution, so use `currentlyAddingScript` to
-  // hold current node, for deriving url in `define` call
-  currentlyAddingScript = node
-
-  // ref: #185 & http://dev.jquery.com/ticket/2709
-  baseElement ?
-      head.insertBefore(node, baseElement) :
-      head.appendChild(node)
-
-  currentlyAddingScript = null
-}
-
-function addOnload(node, callback, url) {
-  var supportOnload = "onload" in node
-
-  if (supportOnload) {
-    node.onload = onload
-    node.onerror = function() {
-      emit("error", { uri: url, node: node })
-      onload()
-    }
-  }
-  else {
-    node.onreadystatechange = function() {
-      if (/loaded|complete/.test(node.readyState)) {
-        onload()
-      }
-    }
-  }
-
-  function onload() {
-    // Ensure only run once and handle memory leak in IE
-    node.onload = node.onerror = node.onreadystatechange = null
-
-    // Remove the script to reduce memory leak
-    if (!data.debug) {
-      head.removeChild(node)
-    }
-
-    // Dereference the node
-    node = null
-
-    callback()
-  }
-}
-
-function getCurrentScript() {
-  if (currentlyAddingScript) {
-    return currentlyAddingScript
-  }
-
-  // For IE6-9 browsers, the script onload event may not fire right
-  // after the script is evaluated. Kris Zyp found that it
-  // could query the script nodes and the one that is in "interactive"
-  // mode indicates the current script
-  // ref: http://goo.gl/JHfFW
-  if (interactiveScript && interactiveScript.readyState === "interactive") {
-    return interactiveScript
-  }
-
-  var scripts = head.getElementsByTagName("script")
-
-  for (var i = scripts.length - 1; i >= 0; i--) {
-    var script = scripts[i]
-    if (script.readyState === "interactive") {
-      interactiveScript = script
-      return interactiveScript
-    }
-  }
-}
-
-
-// For Developers
-seajs.request = request
-
-
-/**
- * util-deps.js - The parser for dependencies
- * ref: tests/research/parse-dependencies/test.html
- */
-
-var REQUIRE_RE = /"(?:\\"|[^"])*"|'(?:\\'|[^'])*'|\/\*[\S\s]*?\*\/|\/(?:\\\/|[^\/\r\n])+\/(?=[^\/])|\/\/.*|\.\s*require|(?:^|[^$])\brequire\s*\(\s*(["'])(.+?)\1\s*\)/g
-var SLASH_RE = /\\\\/g
-
-function parseDependencies(code) {
-  var ret = []
-
-  code.replace(SLASH_RE, "")
-      .replace(REQUIRE_RE, function(m, m1, m2) {
-        if (m2) {
-          ret.push(m2)
-        }
-      })
-
-  return ret
-}
 
 
 /**
@@ -402,11 +221,8 @@ function parseDependencies(code) {
  */
 
 var cachedMods = seajs.cache = {}
-var anonymousMeta
 
-var fetchingList = {}
 var fetchedList = {}
-var callbackList = {}
 
 var STATUS = Module.STATUS = {
   // 1 - The `module.uri` is being fetched
@@ -460,9 +276,7 @@ Module.prototype.load = function() {
 
   mod.status = STATUS.LOADING
 
-  // Emit `load` event for plugins such as combo plugin
   var uris = mod.resolve()
-  emit("load", uris)
 
   var len = mod._remain = uris.length
   var m
@@ -485,24 +299,11 @@ Module.prototype.load = function() {
     return
   }
 
-  // Begin parallel loading
-  var requestCache = {}
-
   for (i = 0; i < len; i++) {
     m = cachedMods[uris[i]]
 
-    if (m.status < STATUS.FETCHING) {
-      m.fetch(requestCache)
-    }
-    else if (m.status === STATUS.SAVED) {
+    if (m.status === STATUS.SAVED) {
       m.load()
-    }
-  }
-
-  // Send all requests at last to avoid cache bug in IE6-9. Issues#808
-  for (var requestUri in requestCache) {
-    if (requestCache.hasOwnProperty(requestUri)) {
-      requestCache[requestUri]()
     }
   }
 }
@@ -533,67 +334,6 @@ Module.prototype.onload = function() {
   // Reduce memory taken
   delete mod._waitings
   delete mod._remain
-}
-
-// Fetch a module
-Module.prototype.fetch = function(requestCache) {
-  var mod = this
-  var uri = mod.uri
-
-  mod.status = STATUS.FETCHING
-
-  // Emit `fetch` event for plugins such as combo plugin
-  var emitData = { uri: uri }
-  emit("fetch", emitData)
-  var requestUri = emitData.requestUri || uri
-
-  // Empty uri or a non-CMD module
-  if (!requestUri || fetchedList[requestUri]) {
-    mod.load()
-    return
-  }
-
-  if (fetchingList[requestUri]) {
-    callbackList[requestUri].push(mod)
-    return
-  }
-
-  fetchingList[requestUri] = true
-  callbackList[requestUri] = [mod]
-
-  // Emit `request` event for plugins such as text plugin
-  emit("request", emitData = {
-    uri: uri,
-    requestUri: requestUri,
-    onRequest: onRequest,
-    charset: data.charset
-  })
-
-  if (!emitData.requested) {
-    requestCache ?
-        requestCache[emitData.requestUri] = sendRequest :
-        sendRequest()
-  }
-
-  function sendRequest() {
-    seajs.request(emitData.requestUri, emitData.onRequest, emitData.charset)
-  }
-
-  function onRequest() {
-    delete fetchingList[requestUri]
-    fetchedList[requestUri] = true
-
-    // Save meta data of anonymous module
-    if (anonymousMeta) {
-      Module.save(uri, anonymousMeta)
-      anonymousMeta = null
-    }
-
-    // Call callbacks
-    var m, mods = callbackList[requestUri]
-    delete callbackList[requestUri]
-    while ((m = mods.shift())) m.load()
-  }
 }
 
 // Execute a module
@@ -642,9 +382,6 @@ Module.prototype.exec = function () {
   mod.exports = exports
   mod.status = STATUS.EXECUTED
 
-  // Emit `exec` event
-  emit("exec", mod)
-
   return exports
 }
 
@@ -652,7 +389,6 @@ Module.prototype.exec = function () {
 Module.resolve = function(id, refUri) {
   // Emit `resolve` event for plugins such as text plugin
   var emitData = { id: id, refUri: refUri }
-  emit("resolve", emitData)
 
   return emitData.uri || seajs.resolve(emitData.id, refUri)
 }
@@ -680,11 +416,6 @@ Module.define = function (id, deps, factory) {
     }
   }
 
-  // Parse dependencies according to the module factory code
-  if (!isArray(deps) && isFunction(factory)) {
-    deps = parseDependencies(factory.toString())
-  }
-
   var meta = {
     id: id,
     uri: Module.resolve(id),
@@ -692,24 +423,7 @@ Module.define = function (id, deps, factory) {
     factory: factory
   }
 
-  // Try to derive uri in IE6-9 for anonymous modules
-  if (!meta.uri && doc.attachEvent) {
-    var script = getCurrentScript()
-
-    if (script) {
-      meta.uri = script.src
-    }
-
-    // NOTE: If the id-deriving methods above is failed, then falls back
-    // to use onload event to get the uri
-  }
-
-  // Emit `define` event, used in nocache plugin, seajs node version etc
-  emit("define", meta)
-
-  meta.uri ? Module.save(meta.uri, meta) :
-      // Save information for "saving" work in the script onload event
-      anonymousMeta = meta
+  Module.save(meta.uri, meta)
 }
 
 // Save meta data to cachedMods
@@ -722,8 +436,6 @@ Module.save = function(uri, meta) {
     mod.dependencies = meta.deps || []
     mod.factory = meta.factory
     mod.status = STATUS.SAVED
-
-    emit("save", mod)
   }
 }
 

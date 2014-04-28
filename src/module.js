@@ -3,11 +3,8 @@
  */
 
 var cachedMods = seajs.cache = {}
-var anonymousMeta
 
-var fetchingList = {}
 var fetchedList = {}
-var callbackList = {}
 
 var STATUS = Module.STATUS = {
   // 1 - The `module.uri` is being fetched
@@ -61,9 +58,7 @@ Module.prototype.load = function() {
 
   mod.status = STATUS.LOADING
 
-  // Emit `load` event for plugins such as combo plugin
   var uris = mod.resolve()
-  emit("load", uris)
 
   var len = mod._remain = uris.length
   var m
@@ -86,24 +81,11 @@ Module.prototype.load = function() {
     return
   }
 
-  // Begin parallel loading
-  var requestCache = {}
-
   for (i = 0; i < len; i++) {
     m = cachedMods[uris[i]]
 
-    if (m.status < STATUS.FETCHING) {
-      m.fetch(requestCache)
-    }
-    else if (m.status === STATUS.SAVED) {
+    if (m.status === STATUS.SAVED) {
       m.load()
-    }
-  }
-
-  // Send all requests at last to avoid cache bug in IE6-9. Issues#808
-  for (var requestUri in requestCache) {
-    if (requestCache.hasOwnProperty(requestUri)) {
-      requestCache[requestUri]()
     }
   }
 }
@@ -134,67 +116,6 @@ Module.prototype.onload = function() {
   // Reduce memory taken
   delete mod._waitings
   delete mod._remain
-}
-
-// Fetch a module
-Module.prototype.fetch = function(requestCache) {
-  var mod = this
-  var uri = mod.uri
-
-  mod.status = STATUS.FETCHING
-
-  // Emit `fetch` event for plugins such as combo plugin
-  var emitData = { uri: uri }
-  emit("fetch", emitData)
-  var requestUri = emitData.requestUri || uri
-
-  // Empty uri or a non-CMD module
-  if (!requestUri || fetchedList[requestUri]) {
-    mod.load()
-    return
-  }
-
-  if (fetchingList[requestUri]) {
-    callbackList[requestUri].push(mod)
-    return
-  }
-
-  fetchingList[requestUri] = true
-  callbackList[requestUri] = [mod]
-
-  // Emit `request` event for plugins such as text plugin
-  emit("request", emitData = {
-    uri: uri,
-    requestUri: requestUri,
-    onRequest: onRequest,
-    charset: data.charset
-  })
-
-  if (!emitData.requested) {
-    requestCache ?
-        requestCache[emitData.requestUri] = sendRequest :
-        sendRequest()
-  }
-
-  function sendRequest() {
-    seajs.request(emitData.requestUri, emitData.onRequest, emitData.charset)
-  }
-
-  function onRequest() {
-    delete fetchingList[requestUri]
-    fetchedList[requestUri] = true
-
-    // Save meta data of anonymous module
-    if (anonymousMeta) {
-      Module.save(uri, anonymousMeta)
-      anonymousMeta = null
-    }
-
-    // Call callbacks
-    var m, mods = callbackList[requestUri]
-    delete callbackList[requestUri]
-    while ((m = mods.shift())) m.load()
-  }
 }
 
 // Execute a module
@@ -243,9 +164,6 @@ Module.prototype.exec = function () {
   mod.exports = exports
   mod.status = STATUS.EXECUTED
 
-  // Emit `exec` event
-  emit("exec", mod)
-
   return exports
 }
 
@@ -253,7 +171,6 @@ Module.prototype.exec = function () {
 Module.resolve = function(id, refUri) {
   // Emit `resolve` event for plugins such as text plugin
   var emitData = { id: id, refUri: refUri }
-  emit("resolve", emitData)
 
   return emitData.uri || seajs.resolve(emitData.id, refUri)
 }
@@ -281,11 +198,6 @@ Module.define = function (id, deps, factory) {
     }
   }
 
-  // Parse dependencies according to the module factory code
-  if (!isArray(deps) && isFunction(factory)) {
-    deps = parseDependencies(factory.toString())
-  }
-
   var meta = {
     id: id,
     uri: Module.resolve(id),
@@ -293,24 +205,7 @@ Module.define = function (id, deps, factory) {
     factory: factory
   }
 
-  // Try to derive uri in IE6-9 for anonymous modules
-  if (!meta.uri && doc.attachEvent) {
-    var script = getCurrentScript()
-
-    if (script) {
-      meta.uri = script.src
-    }
-
-    // NOTE: If the id-deriving methods above is failed, then falls back
-    // to use onload event to get the uri
-  }
-
-  // Emit `define` event, used in nocache plugin, seajs node version etc
-  emit("define", meta)
-
-  meta.uri ? Module.save(meta.uri, meta) :
-      // Save information for "saving" work in the script onload event
-      anonymousMeta = meta
+  Module.save(meta.uri, meta)
 }
 
 // Save meta data to cachedMods
@@ -323,8 +218,6 @@ Module.save = function(uri, meta) {
     mod.dependencies = meta.deps || []
     mod.factory = meta.factory
     mod.status = STATUS.SAVED
-
-    emit("save", mod)
   }
 }
 
