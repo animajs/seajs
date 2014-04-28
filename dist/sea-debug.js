@@ -26,8 +26,6 @@ function isType(type) {
   }
 }
 
-var isObject = isType("Object")
-var isString = isType("String")
 var isArray = Array.isArray || isType("Array")
 var isFunction = isType("Function")
 
@@ -37,17 +35,12 @@ function cid() {
 }
 
 
-seajs.on = seajs.off = function(){return seajs}
-var emit = seajs.emit = function(){return seajs}
+
 /**
  * util-path.js - The utilities for operating path such as id, uri
  */
 
 var DIRNAME_RE = /[^?#]*\//
-
-var DOT_RE = /\/\.\//g
-var DOUBLE_DOT_RE = /\/[^/]+\/\.\.\//
-var DOUBLE_SLASH_RE = /([^:/])\/\//g
 
 // Extract the directory portion of a path
 // dirname("a/b/c.js?t=123#xx/zz") ==> "a/b/"
@@ -56,196 +49,7 @@ function dirname(path) {
   return path.match(DIRNAME_RE)[0]
 }
 
-// Canonicalize a path
-// realpath("http://test.com/a//./b/../c") ==> "http://test.com/a/c"
-function realpath(path) {
-  // /a/b/./c/./d ==> /a/b/c/d
-  path = path.replace(DOT_RE, "/")
-
-  // a/b/c/../../d  ==>  a/b/../d  ==>  a/d
-  while (path.match(DOUBLE_DOT_RE)) {
-    path = path.replace(DOUBLE_DOT_RE, "/")
-  }
-
-  // a//b/c  ==>  a/b/c
-  path = path.replace(DOUBLE_SLASH_RE, "$1/")
-
-  return path
-}
-
-// Normalize an id
-// normalize("path/to/a") ==> "path/to/a.js"
-// NOTICE: substring is faster than negative slice and RegExp
-function normalize(path) {
-  var last = path.length - 1
-  var lastC = path.charAt(last)
-
-  // If the uri ends with `#`, just return it without '#'
-  if (lastC === "#") {
-    return path.substring(0, last)
-  }
-
-  return (path.substring(last - 2) === ".js" ||
-      path.indexOf("?") > 0 ||
-      path.substring(last - 3) === ".css" ||
-      lastC === "/") ? path : path + ".js"
-}
-
-
-var PATHS_RE = /^([^/:]+)(\/.+)$/
-var VARS_RE = /{([^{]+)}/g
-
-function parseAlias(id) {
-  var alias = data.alias
-  return alias && isString(alias[id]) ? alias[id] : id
-}
-
-function parsePaths(id) {
-  var paths = data.paths
-  var m
-
-  if (paths && (m = id.match(PATHS_RE)) && isString(paths[m[1]])) {
-    id = paths[m[1]] + m[2]
-  }
-
-  return id
-}
-
-function parseVars(id) {
-  var vars = data.vars
-
-  if (vars && id.indexOf("{") > -1) {
-    id = id.replace(VARS_RE, function(m, key) {
-      return isString(vars[key]) ? vars[key] : m
-    })
-  }
-
-  return id
-}
-
-function parseMap(uri) {
-  var map = data.map
-  var ret = uri
-
-  if (map) {
-    for (var i = 0, len = map.length; i < len; i++) {
-      var rule = map[i]
-
-      ret = isFunction(rule) ?
-          (rule(uri) || uri) :
-          uri.replace(rule[0], rule[1])
-
-      // Only apply the first matched rule
-      if (ret !== uri) break
-    }
-  }
-
-  return ret
-}
-
-
-var ABSOLUTE_RE = /^\/\/.|:\//
-var ROOT_DIR_RE = /^.*?\/\/.*?\//
-
-function addBase(id, refUri) {
-  var ret
-  var first = id.charAt(0)
-
-  // Absolute
-  if (ABSOLUTE_RE.test(id)) {
-    ret = id
-  }
-  // Relative
-  else if (first === ".") {
-    ret = realpath((refUri ? dirname(refUri) : data.cwd) + id)
-  }
-  // Root
-  else if (first === "/") {
-    var m = data.cwd.match(ROOT_DIR_RE)
-    ret = m ? m[0] + id.substring(1) : id
-  }
-  // Top-level
-  else {
-    ret = data.base + id
-  }
-
-  // Add default protocol when uri begins with "//"
-  if (ret.indexOf("//") === 0) {
-    ret = location.protocol + ret
-  }
-
-  return ret
-}
-
-function id2Uri(id, refUri) {
-  if (!id) return ""
-
-  id = parseAlias(id)
-  id = parsePaths(id)
-  id = parseVars(id)
-  id = normalize(id)
-
-  var uri = addBase(id, refUri)
-  uri = parseMap(uri)
-
-  return uri
-}
-
-
-var doc = document
 var cwd = dirname(location.href)
-var scripts = doc.scripts
-
-// Recommend to add `seajsnode` id for the `sea.js` script element
-var loaderScript = doc.getElementById("seajsnode") ||
-    scripts[scripts.length - 1]
-
-// When `sea.js` is inline, set loaderDir to current working directory
-var loaderDir = dirname(getScriptAbsoluteSrc(loaderScript) || cwd)
-
-function getScriptAbsoluteSrc(node) {
-  return node.hasAttribute ? // non-IE6/7
-      node.src :
-    // see http://msdn.microsoft.com/en-us/library/ms536429(VS.85).aspx
-      node.getAttribute("src", 4)
-}
-
-
-// For Developers
-seajs.resolve = id2Uri
-
-
-/**
- * util-request.js - The utilities for requesting script and style files
- * ref: tests/research/load-js-css/test.html
- */
-
-var interactiveScript
-
-function getCurrentScript() {
-  if (doc.currentScript) {
-    return doc.currentScript
-  }
-
-  // For IE6-9 browsers, the script onload event may not fire right
-  // after the script is evaluated. Kris Zyp found that it
-  // could query the script nodes and the one that is in "interactive"
-  // mode indicates the current script
-  // ref: http://goo.gl/JHfFW
-  if (interactiveScript && interactiveScript.readyState === "interactive") {
-    return interactiveScript
-  }
-
-  var scripts = head.getElementsByTagName("script")
-
-  for (var i = scripts.length - 1; i >= 0; i--) {
-    var script = scripts[i]
-    if (script.readyState === "interactive") {
-      interactiveScript = script
-      return interactiveScript
-    }
-  }
-}
 
 
 /**
@@ -253,8 +57,6 @@ function getCurrentScript() {
  */
 
 var cachedMods = seajs.cache = {}
-
-var fetchedList = {}
 
 var STATUS = Module.STATUS = {
   // 1 - The `module.uri` is being fetched
@@ -285,18 +87,6 @@ function Module(uri, deps) {
   this._remain = 0
 }
 
-// Resolve module.dependencies
-Module.prototype.resolve = function() {
-  var mod = this
-  var ids = mod.dependencies
-  var uris = []
-
-  for (var i = 0, len = ids.length; i < len; i++) {
-    uris[i] = Module.resolve(ids[i], mod.uri)
-  }
-  return uris
-}
-
 // Load module.dependencies and fire onload when all done
 Module.prototype.load = function() {
   var mod = this
@@ -308,7 +98,7 @@ Module.prototype.load = function() {
 
   mod.status = STATUS.LOADING
 
-  var uris = mod.resolve()
+  var uris = mod.dependencies
 
   var len = mod._remain = uris.length
   var m
@@ -385,11 +175,11 @@ Module.prototype.exec = function () {
   var uri = mod.uri
 
   function require(id) {
-    return Module.get(require.resolve(id)).exec()
+    return Module.get(id).exec()
   }
 
   require.resolve = function(id) {
-    return Module.resolve(id, uri)
+    return id
   }
 
   require.async = function(ids, callback) {
@@ -417,14 +207,6 @@ Module.prototype.exec = function () {
   return exports
 }
 
-// Resolve id to uri
-Module.resolve = function(id, refUri) {
-  // Emit `resolve` event for plugins such as text plugin
-  var emitData = { id: id, refUri: refUri }
-
-  return emitData.uri || seajs.resolve(emitData.id, refUri)
-}
-
 // Define a module
 Module.define = function (id, deps, factory) {
   var argsLen = arguments.length
@@ -448,20 +230,12 @@ Module.define = function (id, deps, factory) {
     }
   }
 
+  id = id || ''
   var meta = {
     id: id,
-    uri: Module.resolve(id),
+    uri: id,
     deps: deps,
     factory: factory
-  }
-
-  // Try to derive uri for anonymous modules
-  if (!meta.uri) {
-    var script = getCurrentScript()
-
-    if (script) {
-      meta.uri = script.src
-    }
   }
 
   Module.save(meta.uri, meta)
@@ -491,7 +265,7 @@ Module.use = function (ids, callback, uri) {
 
   mod.callback = function() {
     var exports = []
-    var uris = mod.resolve()
+    var uris = mod.dependencies
 
     for (var i = 0, len = uris.length; i < len; i++) {
       exports[i] = cachedMods[uris[i]].exec()
@@ -522,7 +296,6 @@ global.define = Module.define
 // For Developers
 
 seajs.Module = Module
-data.fetchedList = fetchedList
 data.cid = cid
 
 seajs.require = function(id) {
@@ -539,57 +312,7 @@ seajs.require = function(id) {
  * config.js - The configuration for the loader
  */
 
-// The root path to use for id2uri parsing
-data.base = loaderDir
-
-// The loader directory
-data.dir = loaderDir
-
 // The current working directory
 data.cwd = cwd
-
-// The charset for requesting files
-data.charset = "utf-8"
-
-// data.alias - An object containing shorthands of module id
-// data.paths - An object containing path shorthands in module id
-// data.vars - The {xxx} variables in module id
-// data.map - An array containing rules to map module uri
-// data.debug - Debug mode. The default value is false
-
-seajs.config = function(configData) {
-
-  for (var key in configData) {
-    var curr = configData[key]
-    var prev = data[key]
-
-    // Merge object config such as alias, vars
-    if (prev && isObject(prev)) {
-      for (var k in curr) {
-        prev[k] = curr[k]
-      }
-    }
-    else {
-      // Concat array config such as map
-      if (isArray(prev)) {
-        curr = prev.concat(curr)
-      }
-      // Make sure that `data.base` is an absolute path
-      else if (key === "base") {
-        // Make sure end with "/"
-        if (curr.slice(-1) !== "/") {
-          curr += "/"
-        }
-        curr = addBase(curr)
-      }
-
-      // Set config
-      data[key] = curr
-    }
-  }
-
-  emit("config", configData)
-  return seajs
-}
 
 })(this);

@@ -4,8 +4,6 @@
 
 var cachedMods = seajs.cache = {}
 
-var fetchedList = {}
-
 var STATUS = Module.STATUS = {
   // 1 - The `module.uri` is being fetched
   FETCHING: 1,
@@ -35,18 +33,6 @@ function Module(uri, deps) {
   this._remain = 0
 }
 
-// Resolve module.dependencies
-Module.prototype.resolve = function() {
-  var mod = this
-  var ids = mod.dependencies
-  var uris = []
-
-  for (var i = 0, len = ids.length; i < len; i++) {
-    uris[i] = Module.resolve(ids[i], mod.uri)
-  }
-  return uris
-}
-
 // Load module.dependencies and fire onload when all done
 Module.prototype.load = function() {
   var mod = this
@@ -58,7 +44,7 @@ Module.prototype.load = function() {
 
   mod.status = STATUS.LOADING
 
-  var uris = mod.resolve()
+  var uris = mod.dependencies
 
   var len = mod._remain = uris.length
   var m
@@ -135,11 +121,11 @@ Module.prototype.exec = function () {
   var uri = mod.uri
 
   function require(id) {
-    return Module.get(require.resolve(id)).exec()
+    return Module.get(id).exec()
   }
 
   require.resolve = function(id) {
-    return Module.resolve(id, uri)
+    return id
   }
 
   require.async = function(ids, callback) {
@@ -167,14 +153,6 @@ Module.prototype.exec = function () {
   return exports
 }
 
-// Resolve id to uri
-Module.resolve = function(id, refUri) {
-  // Emit `resolve` event for plugins such as text plugin
-  var emitData = { id: id, refUri: refUri }
-
-  return emitData.uri || seajs.resolve(emitData.id, refUri)
-}
-
 // Define a module
 Module.define = function (id, deps, factory) {
   var argsLen = arguments.length
@@ -198,20 +176,12 @@ Module.define = function (id, deps, factory) {
     }
   }
 
+  id = id || ''
   var meta = {
     id: id,
-    uri: Module.resolve(id),
+    uri: id,
     deps: deps,
     factory: factory
-  }
-
-  // Try to derive uri for anonymous modules
-  if (!meta.uri) {
-    var script = getCurrentScript()
-
-    if (script) {
-      meta.uri = script.src
-    }
   }
 
   Module.save(meta.uri, meta)
@@ -241,7 +211,7 @@ Module.use = function (ids, callback, uri) {
 
   mod.callback = function() {
     var exports = []
-    var uris = mod.resolve()
+    var uris = mod.dependencies
 
     for (var i = 0, len = uris.length; i < len; i++) {
       exports[i] = cachedMods[uris[i]].exec()
@@ -272,7 +242,6 @@ global.define = Module.define
 // For Developers
 
 seajs.Module = Module
-data.fetchedList = fetchedList
 data.cid = cid
 
 seajs.require = function(id) {
