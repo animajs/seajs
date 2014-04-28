@@ -136,15 +136,11 @@ seajs.use = function(ids, callback) {
 Module.define.cmd = {}
 global.define = Module.define
 
+global.define.use = seajs.use
 
 // For Developers
 
 seajs.Module = Module
 data.cid = cid
 
-seajs.require = function(id) {
-  var mod = Module.get(id)
-  mod.exec()
-  return mod.exports
-}
 

@@ -4,11 +4,11 @@
 (function(global, undefined) {
 
 // Avoid conflicting when `sea.js` is loaded multiple times
-if (global.seajs) {
+if (global.define) {
   return
 }
 
-var seajs = global.seajs = {
+var seajs = {
   // The current version of Sea.js being used
   version: "2.3.0"
 }
@@ -190,17 +190,13 @@ seajs.use = function(ids, callback) {
 Module.define.cmd = {}
 global.define = Module.define
 
+global.define.use = seajs.use
 
 // For Developers
 
 seajs.Module = Module
 data.cid = cid
 
-seajs.require = function(id) {
-  var mod = Module.get(id)
-  mod.exec()
-  return mod.exports
-}
 
 
 /**

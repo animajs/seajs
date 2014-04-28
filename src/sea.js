@@ -1,4 +1,4 @@
-var seajs = global.seajs = {
+var seajs = {
   // The current version of Sea.js being used
   version: "@VERSION"
 }

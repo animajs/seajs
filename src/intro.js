@@ -4,6 +4,6 @@
 (function(global, undefined) {
 
 // Avoid conflicting when `sea.js` is loaded multiple times
-if (global.seajs) {
+if (global.define) {
   return
 }

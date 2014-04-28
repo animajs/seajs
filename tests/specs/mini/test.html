@@ -10,23 +10,24 @@
 <body>
 <div id="out"></div>
 <script>
+  var seajs = define
   seajs.off = function(){}
   seajs.config = function(){}
 
   define('a', function() { return 'a' })
   define('b', ['c'], function(require) { var c = require('c'); return c })
   define('c', {})
-  seajs.use([''], function(test) {
-    seajs.use('a', function(a) {
+  define.use([''], function(test) {
+    define.use('a', function(a) {
       test.assert(a === 'a', 'a is a')
     })
-    seajs.use('b', function(b) {
+    define.use('b', function(b) {
       test.assert(JSON.stringify(b) == '{}', 'b is {}')
     })
-    seajs.use('c', function(c) {
+    define.use('c', function(c) {
       test.assert(JSON.stringify(c) == '{}', 'c is {}')
     })
-    seajs.use(['b', 'c'], function(b, c) {
+    define.use(['b', 'c'], function(b, c) {
       test.assert(b === c, 'b is return c')
     })
     define('e', function(require, exports, module) {
@@ -39,7 +40,7 @@
       test.assert(true, 'f is require.async')
       test.next()
     })
-    seajs.use('e', function(e) {
+    define.use('e', function(e) {
       test.assert(e === 'e', 'e is e')
     })
   })
