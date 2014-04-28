@@ -58,104 +58,9 @@ var cwd = dirname(location.href)
 
 var cachedMods = seajs.cache = {}
 
-var STATUS = Module.STATUS = {
-  // 1 - The `module.uri` is being fetched
-  FETCHING: 1,
-  // 2 - The meta data has been saved to cachedMods
-  SAVED: 2,
-  // 3 - The `module.dependencies` are being loaded
-  LOADING: 3,
-  // 4 - The module are ready to execute
-  LOADED: 4,
-  // 5 - The module is being executed
-  EXECUTING: 5,
-  // 6 - The `module.exports` is available
-  EXECUTED: 6
-}
-
-
 function Module(uri, deps) {
   this.uri = uri
   this.dependencies = deps || []
-  this.exports = null
-  this.status = 0
-
-  // Who depends on me
-  this._waitings = {}
-
-  // The number of unloaded dependencies
-  this._remain = 0
-}
-
-// Load module.dependencies and fire onload when all done
-Module.prototype.load = function() {
-  var mod = this
-
-  // If the module is being loaded, just wait it onload call
-  if (mod.status >= STATUS.LOADING) {
-    return
-  }
-
-  mod.status = STATUS.LOADING
-
-  var uris = mod.dependencies
-
-  var len = mod._remain = uris.length
-  var m
-
-  // Initialize modules and register waitings
-  for (var i = 0; i < len; i++) {
-    m = Module.get(uris[i])
-
-    if (m.status < STATUS.LOADED) {
-      // Maybe duplicate: When module has dupliate dependency, it should be it's count, not 1
-      m._waitings[mod.uri] = (m._waitings[mod.uri] || 0) + 1
-    }
-    else {
-      mod._remain--
-    }
-  }
-
-  if (mod._remain === 0) {
-    mod.onload()
-    return
-  }
-
-  for (i = 0; i < len; i++) {
-    m = cachedMods[uris[i]]
-
-    if (m.status === STATUS.SAVED) {
-      m.load()
-    }
-  }
-}
-
-// Call this method when module is loaded
-Module.prototype.onload = function() {
-  var mod = this
-  mod.status = STATUS.LOADED
-
-  if (mod.callback) {
-    mod.callback()
-  }
-
-  // Notify waiting modules to fire onload
-  var waitings = mod._waitings
-  var uri, m
-
-  for (uri in waitings) {
-    if (waitings.hasOwnProperty(uri)) {
-      m = cachedMods[uri]
-      m._remain -= waitings[uri]
-      if (m._remain === 0) {
-        m.onload()
-      }
-    }
-  }
-
-  // Reduce memory taken
-  delete mod._waitings
-  delete mod._remain
 }
 
 // Execute a module
@@ -165,11 +70,9 @@ Module.prototype.exec = function () {
   // When module is executed, DO NOT execute it again. When module
   // is being executed, just return `module.exports` too, for avoiding
   // circularly calling
-  if (mod.status >= STATUS.EXECUTING) {
+  if (mod.exports !== undefined) {
     return mod.exports
   }
-
-  mod.status = STATUS.EXECUTING
 
   // Create require
   var uri = mod.uri
@@ -202,7 +105,6 @@ Module.prototype.exec = function () {
   delete mod.factory
 
   mod.exports = exports
-  mod.status = STATUS.EXECUTED
 
   return exports
 }
@@ -245,13 +147,9 @@ Module.define = function (id, deps, factory) {
 Module.save = function(uri, meta) {
   var mod = Module.get(uri)
 
-  // Do NOT override already saved modules
-  if (mod.status < STATUS.SAVED) {
-    mod.id = meta.id || uri
-    mod.dependencies = meta.deps || []
-    mod.factory = meta.factory
-    mod.status = STATUS.SAVED
-  }
+  mod.id = meta.id || uri
+  mod.dependencies = meta.deps || []
+  mod.factory = meta.factory
 }
 
 // Get an existed module or create a new one
@@ -278,7 +176,7 @@ Module.use = function (ids, callback, uri) {
     delete mod.callback
   }
 
-  mod.load()
+  mod.callback()
 }
 
 
@@ -299,11 +197,8 @@ seajs.Module = Module
 data.cid = cid
 
 seajs.require = function(id) {
-  var mod = Module.get(Module.resolve(id))
-  if (mod.status < STATUS.EXECUTING) {
-    mod.onload()
-    mod.exec()
-  }
+  var mod = Module.get(id)
+  mod.exec()
   return mod.exports
 }
 
