@@ -161,22 +161,17 @@ Module.get = function(uri, deps) {
 Module.use = function (ids, callback, uri) {
   var mod = Module.get(uri, isArray(ids) ? ids : [ids])
 
-  mod.callback = function() {
-    var exports = []
-    var uris = mod.dependencies
+  var exports = []
+  var uris = mod.dependencies
 
-    for (var i = 0, len = uris.length; i < len; i++) {
-      exports[i] = cachedMods[uris[i]].exec()
-    }
-
-    if (callback) {
-      callback.apply(global, exports)
-    }
-
-    delete mod.callback
+  for (var i = 0, len = uris.length; i < len; i++) {
+    exports[i] = cachedMods[uris[i]].exec()
   }
 
-  mod.callback()
+  if (callback) {
+    callback.apply(global, exports)
+  }
+
 }
 
 
@@ -187,14 +182,12 @@ seajs.use = function(ids, callback) {
   return seajs
 }
 
-Module.define.cmd = {}
 global.define = Module.define
 
 global.define.use = seajs.use
 
 // For Developers
 
-seajs.Module = Module
 data.cid = cid
 
 
