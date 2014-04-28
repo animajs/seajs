@@ -123,14 +123,12 @@ Module.use = function (ids, callback, uri) {
 
 // Public API
 
-seajs.use = function(ids, callback) {
-  Module.use(ids, callback, data.cwd + "_use_" + cid())
-  return seajs
-}
-
 global.define = Module.define
 
-global.define.use = seajs.use
+global.define.use = function(ids, callback) {
+  Module.use(ids, callback, data.cwd + "_use_" + cid())
+  return global.define
+}
 
 // For Developers
 
