@@ -3,4 +3,5 @@
  */
 
 // The current working directory
-data.cwd = cwd
+global.define.cwd = cwd
+global.define.cache = cachedMods

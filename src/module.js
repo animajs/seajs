@@ -2,7 +2,7 @@
  * module.js - The core of module loader
  */
 
-var cachedMods = seajs.cache = {}
+var cachedMods = {}
 
 function Module(uri, deps) {
   this.uri = uri
@@ -126,12 +126,7 @@ Module.use = function (ids, callback, uri) {
 global.define = Module.define
 
 global.define.use = function(ids, callback) {
-  Module.use(ids, callback, data.cwd + "_use_" + cid())
+  Module.use(ids, callback, cwd + "_use_" + cid())
   return global.define
 }
-
-// For Developers
-
-data.cid = cid
-
 
