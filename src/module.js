@@ -56,7 +56,7 @@ Module.prototype.exec = function () {
 }
 
 // Define a module
-Module.define = function (id, deps, factory) {
+define = function (id, deps, factory) {
   var argsLen = arguments.length
 
   // define(factory)
@@ -123,10 +123,9 @@ Module.use = function (ids, callback, uri) {
 
 // Public API
 
-global.define = Module.define
 
-global.define.use = function(ids, callback) {
+define.use = function(ids, callback) {
   Module.use(ids, callback, cwd + "_use_" + cid())
-  return global.define
+  return define
 }
 
