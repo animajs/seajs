@@ -43,6 +43,8 @@
     define.use('e', function(e) {
       test.assert(e === 'e', 'e is e')
     })
+    var req = define.require('e')
+    test.assert(req === 'e', 'define.require("e") is e')
   })
 </script>
 </body>
