@@ -18,36 +18,32 @@
   define('b', ['c'], function(require) { var c = require('c'); return c })
   define('c', [], {})
 
-  require(['test'], function(test) {
-    require('a', function(a) {
-      test.assert(a === 'a', 'a is a')
-    })
-    require('b', function(b) {
-      test.assert(JSON.stringify(b) == '{}', 'b is {}')
-    })
-    require('c', function(c) {
-      test.assert(JSON.stringify(c) == '{}', 'c is {}')
-    })
-    require(['b', 'c'], function(b, c) {
-      test.assert(b === c, 'b is return c')
-    })
-    define('e', [], function(require, exports, module) {
-      module.exports = 'e'
-      setTimeout(function() {
-        require.async('f')
-      }, 1)
-    })
-    define('f', [], function(require) {
-      test.assert(true, 'f is require.async')
-      test.assert(require.resolve('e') === 'e', 'require.resolve(id) returns id')
-      test.next()
-    })
-    require('e', function(e) {
-      test.assert(e === 'e', 'e is e')
-    })
-    var req = require('e')
-    test.assert(req === 'e', 'define.require("e") is e')
+  var test = require('test')
+
+  var a = require('a')
+  test.assert(a === 'a', 'a is a')
+
+  var b = require('b')
+  test.assert(JSON.stringify(b) == '{}', 'b is {}')
+
+  var c = require('c')
+  test.assert(JSON.stringify(c) == '{}', 'c is {}')
+
+  test.assert(b === c, 'b is return c')
+
+  define('e', [], function(require, exports, module) {
+    module.exports = 'e'
   })
+
+  var e = require('e')
+  test.assert(e === 'e', 'e is e')
+
+  define('f', [], function(require) {
+    test.assert(true, 'f is test.next() call')
+    test.next()
+  })
+
+  require('f')
 </script>
 </body>
 </html>

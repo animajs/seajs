@@ -8,7 +8,6 @@ function isType(type) {
   }
 }
 
-var isArray = Array.isArray || isType("Array")
 var isFunction = isType("Function")
 
 var _cid = 0
