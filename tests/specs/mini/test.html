@@ -14,36 +14,38 @@
   seajs.off = function(){}
   seajs.config = function(){}
 
-  define('a', function() { return 'a' })
+  define('a', [], function() { return 'a' })
   define('b', ['c'], function(require) { var c = require('c'); return c })
-  define('c', {})
-  define.use([''], function(test) {
-    define.use('a', function(a) {
+  define('c', [], {})
+
+  require(['test'], function(test) {
+    require('a', function(a) {
       test.assert(a === 'a', 'a is a')
     })
-    define.use('b', function(b) {
+    require('b', function(b) {
       test.assert(JSON.stringify(b) == '{}', 'b is {}')
     })
-    define.use('c', function(c) {
+    require('c', function(c) {
       test.assert(JSON.stringify(c) == '{}', 'c is {}')
     })
-    define.use(['b', 'c'], function(b, c) {
+    require(['b', 'c'], function(b, c) {
       test.assert(b === c, 'b is return c')
     })
-    define('e', function(require, exports, module) {
+    define('e', [], function(require, exports, module) {
       module.exports = 'e'
       setTimeout(function() {
         require.async('f')
       }, 1)
     })
-    define('f', function() {
+    define('f', [], function(require) {
       test.assert(true, 'f is require.async')
+      test.assert(require.resolve('e') === 'e', 'require.resolve(id) returns id')
       test.next()
     })
-    define.use('e', function(e) {
+    require('e', function(e) {
       test.assert(e === 'e', 'e is e')
     })
-    var req = define.require('e')
+    var req = require('e')
     test.assert(req === 'e', 'define.require("e") is e')
   })
 </script>

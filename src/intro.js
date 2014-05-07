@@ -3,4 +3,5 @@
  */
 
 var define;
+var require;
 (function(global, undefined) {
