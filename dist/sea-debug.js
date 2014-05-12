@@ -39,9 +39,10 @@ Module.prototype.exec = function () {
   // When module is executed, DO NOT execute it again. When module
   // is being executed, just return `module.exports` too, for avoiding
   // circularly calling
-  if (mod.exports !== undefined) {
+  if (this.execed) {
     return mod.exports
   }
+  this.execed = true;
 
   function require(id) {
     return Module.get(id).exec()
@@ -51,8 +52,8 @@ Module.prototype.exec = function () {
   var factory = mod.factory
 
   var exports = isFunction(factory) ?
-      factory(require, mod.exports = {}, mod) :
-      factory
+    factory(require, mod.exports = {}, mod) :
+    factory
 
   if (exports === undefined) {
     exports = mod.exports
@@ -95,7 +96,7 @@ Module.get = function(id) {
 
 require = function(id) {
   var mod = Module.get(id)
-  if(mod.exports === undefined) {
+  if(!mod.execed) {
     mod.exec()
   }
   return mod.exports
