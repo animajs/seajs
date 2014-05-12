@@ -9,9 +9,3 @@ function isType(type) {
 }
 
 var isFunction = isType("Function")
-
-var _cid = 0
-function cid() {
-  return _cid++
-}
-
